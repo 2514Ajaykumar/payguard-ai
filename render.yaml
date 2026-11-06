@@ -26,8 +26,7 @@ services:
     plan: free
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npm run build
-    preDeployCommand: npx prisma migrate deploy
-    startCommand: node dist/server.js
+    startCommand: npx prisma migrate deploy && node dist/server.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
