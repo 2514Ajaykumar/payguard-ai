@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #080B11;
+    color: #F8FAFC;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom fintech card styling */
+.glass-panel {
+  background: rgba(14, 19, 31, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-panel-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(0, 112, 186, 0.35);
+  box-shadow: 0 4px 20px -2px rgba(0, 112, 186, 0.15);
+}
+
+/* Subtle glow badges */
+.badge-glow-approved {
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.badge-glow-review {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.badge-glow-blocked {
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080B11;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}

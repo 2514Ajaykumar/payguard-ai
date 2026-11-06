@@ -1,0 +1,118 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum DecisionStatus {
+  APPROVED
+  REVIEW_REQUIRED
+  BLOCKED
+}
+
+enum PaymentStatus {
+  CREATED
+  APPROVED_BY_BUYER
+  COMPLETED
+  CANCELLED
+  FAILED
+  RECONCILIATION_REQUIRED
+}
+
+enum ReviewDecision {
+  MANUALLY_APPROVED
+  MANUALLY_REJECTED
+}
+
+// -----------------------------------------------------------------------------
+// Models
+// -----------------------------------------------------------------------------
+
+/// Authoritative pre-transaction decisions evaluated by the PayGuard AI Policy Engine
+model AuthorizationDecision {
+  decisionId          String         @id
+  status              DecisionStatus
+  canProceedToPayment Boolean        // Security invariant: strictly true only when status === APPROVED
+  
+  // Purchase Intent details
+  intentId            String?
+  agentId             String         // Identifier of requesting autonomous agent
+  merchantName        String
+  merchantDomain      String?
+  category            String?
+  amount              Decimal        @db.Decimal(12, 2)
+  currency            String         @db.VarChar(3)
+  description         String?        @db.Text
+  userBudgetLimit     Decimal?       @db.Decimal(12, 2)
+  intentMetadata      Json?
+  
+  // Policy evaluation outputs
+  policyVersion       String
+  reasonCodes         String[]
+  explanation         String         @db.Text
+  policyChecks        Json           // Array of PolicyCheckResult objects
+  riskScore           Int?
+  
+  // Supervisor Review metadata
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  reviewDecision      ReviewDecision?
+  reviewNotes         String?        @db.Text
+
+  // Timestamps
+  evaluatedAt         DateTime       @default(now())
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  // Relations: One authorization decision can have multiple historical payment attempts
+  payments            PaymentRecord[]
+
+  @@index([agentId])
+  @@index([status])
+  @@index([evaluatedAt(sort: Desc)])
+  @@map("authorization_decisions")
+}
+
+/// Audit trail of PayPal Sandbox Orders and server-side captures
+model PaymentRecord {
+  paymentId          String                @id
+  
+  // Foreign Key to AuthorizationDecision
+  decisionId         String
+  decision           AuthorizationDecision @relation(fields: [decisionId], references: [decisionId], onDelete: Restrict)
+  
+  // PayPal Sandbox identifiers
+  paypalOrderId      String                @unique
+  paypalCaptureId    String?               @unique
+  
+  // Authorized spend amount & currency (Decimal precision)
+  amount             Decimal               @db.Decimal(12, 2)
+  currency           String                @db.VarChar(3)
+  status             PaymentStatus
+  
+  // Checkout & Payer details
+  approvalUrl        String?               @db.Text
+  payerId            String?
+  payerEmail         String?
+  failureReason      String?               @db.Text
+  
+  // Settlement mismatch details (preserved if status === RECONCILIATION_REQUIRED)
+  settlementMismatch Json?
+  metadata           Json?
+
+  // Timestamps
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@index([decisionId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@map("payment_records")
+}

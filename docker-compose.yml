@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: payguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: payguard_db
+      POSTGRES_USER: payguard_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_password}
+    ports:
+      # Bound strictly to loopback interface (localhost) to avoid public exposure
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U payguard_user -d payguard_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: payguard_postgres_data

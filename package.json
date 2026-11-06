@@ -1,0 +1,34 @@
+{
+  "name": "payguard-ai",
+  "version": "1.0.0",
+  "description": "PayGuard AI — Trust Before the Transaction. AI Guardrails & Pre-Transaction Policy Enforcement for PayPal Payments.",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && npm run install:backend && npm run install:frontend",
+    "install:backend": "npm install --prefix backend",
+    "install:frontend": "npm install --prefix frontend",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,cyan\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "prisma:generate": "npm run prisma:generate --prefix backend",
+    "prisma:deploy": "npm run prisma:deploy --prefix backend",
+    "typecheck": "npm run typecheck --prefix backend && npm run typecheck --prefix frontend",
+    "test": "npm run test --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": [
+    "paypal",
+    "ai-agent",
+    "fintech",
+    "fraud-prevention",
+    "policy-guardrails",
+    "hackathon"
+  ],
+  "author": "PayGuard AI Team",
+  "license": "MIT"
+}
