@@ -9,16 +9,36 @@ import { PaymentRecord } from '../types/payment.types';
 
 describe('Phase 5.1C: Real PostgreSQL Database Integration Tests', () => {
   const testPrefix = `test_${Date.now()}_${randomUUID().slice(0, 6)}`;
+  let isDbAvailable = false;
   let decisionRepo: PrismaDecisionRepository;
   let paymentRepo: PrismaPaymentRepository;
 
+  function itDb(name: string, fn: (t?: any) => Promise<void> | void) {
+    it(name, async (t) => {
+      if (!isDbAvailable) {
+        t.skip('Skipping PostgreSQL integration test: database server unreachable at localhost:5433');
+        return;
+      }
+      await fn(t);
+    });
+  }
+
   before(async () => {
-    await connectPrisma();
-    decisionRepo = new PrismaDecisionRepository(prisma);
-    paymentRepo = new PrismaPaymentRepository(prisma);
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timeout in test')), 3000)
+      );
+      await Promise.race([connectPrisma(), timeoutPromise]);
+      isDbAvailable = true;
+      decisionRepo = new PrismaDecisionRepository(prisma);
+      paymentRepo = new PrismaPaymentRepository(prisma);
+    } catch {
+      isDbAvailable = false;
+    }
   });
 
   after(async () => {
+    if (!isDbAvailable) return;
     // Clean up only records created during this test run, never existing data
     try {
       await prisma.paymentRecord.deleteMany({
@@ -33,7 +53,7 @@ describe('Phase 5.1C: Real PostgreSQL Database Integration Tests', () => {
     await disconnectPrisma();
   });
 
-  it('1. Saves and retrieves an authorization decision from PostgreSQL', async () => {
+  itDb('1. Saves and retrieves an authorization decision from PostgreSQL', async () => {
     const decisionId = `auth_dec_${testPrefix}_01`;
     const decision: AuthorizationDecision = {
       decisionId,
@@ -76,7 +96,7 @@ describe('Phase 5.1C: Real PostgreSQL Database Integration Tests', () => {
     assert.equal(retrieved?.policyChecks.length, 2);
   });
 
-  it('2. Updates supervisor review information in PostgreSQL', async () => {
+  itDb('2. Updates supervisor review information in PostgreSQL', async () => {
     const decisionId = `auth_dec_${testPrefix}_02`;
     const initialDecision: AuthorizationDecision = {
       decisionId,
@@ -125,7 +145,7 @@ describe('Phase 5.1C: Real PostgreSQL Database Integration Tests', () => {
     assert.equal(reFetched?.reviewMetadata?.reviewedBy, 'supervisor_alice');
   });
 
-  it('3. Saves and retrieves a payment record from PostgreSQL', async () => {
+  itDb('3. Saves and retrieves a payment record from PostgreSQL', async () => {
     const decisionId = `auth_dec_${testPrefix}_03`;
     await decisionRepo.save({
       decisionId,
@@ -174,7 +194,7 @@ describe('Phase 5.1C: Real PostgreSQL Database Integration Tests', () => {
     assert.equal(byOrder?.paymentId, paymentId);
   });
 
-  it('4. Preserves payment records across new repository instances (application restart simulation)', async () => {
+  itDb('4. Preserves payment records across new repository instances (application restart simulation)', async () => {
     const decisionId = `auth_dec_${testPrefix}_04`;
     await decisionRepo.save({
       decisionId,
@@ -223,7 +243,7 @@ describe('Phase 5.1C: Real PostgreSQL Database Integration Tests', () => {
     assert.equal(reloadedDecision?.decisionId, decisionId);
   });
 
-  it('5. Enforces database partial unique index: at most one settled payment per decision', async () => {
+  itDb('5. Enforces database partial unique index: at most one settled payment per decision', async () => {
     const decisionId = `auth_dec_${testPrefix}_05`;
     await decisionRepo.save({
       decisionId,
@@ -282,7 +302,7 @@ describe('Phase 5.1C: Real PostgreSQL Database Integration Tests', () => {
     );
   });
 
-  it('6. Preserves idempotency precedence in findByDecisionId across mixed statuses', async () => {
+  itDb('6. Preserves idempotency precedence in findByDecisionId across mixed statuses', async () => {
     const decisionId = `auth_dec_${testPrefix}_06`;
     await decisionRepo.save({
       decisionId,
